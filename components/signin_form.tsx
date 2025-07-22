@@ -1,5 +1,5 @@
+// components/SignInForm.tsx
 import React, { useState } from "react";
-import { supabase } from "../lib/supabase";
 import {
   View,
   Text,
@@ -9,9 +9,10 @@ import {
   ScrollView,
 } from "react-native";
 import { router } from "expo-router";
+import { supabase } from "../lib/supabase";
 import { LinearGradient } from "expo-linear-gradient";
-import authFormStyles from "./styles"; 
 import Header from "./header_item";
+import authFormStyles from "./styles";
 
 interface SignInFormProps {
   setIsLoggedIn?: (isLoggedIn: boolean) => void;
@@ -43,15 +44,35 @@ const SignInForm: React.FC<SignInFormProps> = ({ setIsLoggedIn }) => {
       password: password.trim(),
     });
 
-    if (error) {
-      Alert.alert("Error", error.message);
+    if (error || !data.user) {
+      Alert.alert("Error", error?.message ?? "Login failed.");
       return;
     }
 
-    if (setIsLoggedIn) {
-      setIsLoggedIn(true);
+    // Insert user details only if not already present
+    const user = data.user;
+    const { data: existing, error: fetchError } = await supabase
+      .from("user_details")
+      .select("uuid")
+      .eq("uuid", user.id)
+      .single();
+
+    if (!existing) {
+      const { first_name, last_name } = user.user_metadata;
+
+      const { error: insertError } = await supabase.from("user_details").insert({
+        uuid: user.id,
+        email: user.email,
+        first_name,
+        last_name,
+      });
+
+      if (insertError) {
+        console.error("Failed to insert user_details:", insertError.message);
+      }
     }
 
+    if (setIsLoggedIn) setIsLoggedIn(true);
     router.replace("/(tabs)");
   };
 
@@ -59,12 +80,8 @@ const SignInForm: React.FC<SignInFormProps> = ({ setIsLoggedIn }) => {
     <LinearGradient colors={["#f0f8ff", "#44a0fcff"]} style={authFormStyles.gradient}>
       <View style={authFormStyles.container}>
         <Header title="Readiculous" />
-        <ScrollView
-          contentContainerStyle={authFormStyles.innerContainer}
-        >
-          <Text style={authFormStyles.title}>
-            Log In
-          </Text>
+        <ScrollView contentContainerStyle={authFormStyles.innerContainer}>
+          <Text style={authFormStyles.title}>Log In</Text>
           <View style={authFormStyles.card}>
             <View style={authFormStyles.inputWrapper}>
               <Text style={authFormStyles.label}>Email:</Text>
@@ -95,10 +112,7 @@ const SignInForm: React.FC<SignInFormProps> = ({ setIsLoggedIn }) => {
               <Text style={authFormStyles.buttonText}>Sign In</Text>
             </Pressable>
 
-            <Pressable
-              style={{ marginTop: 15 }}
-              onPress={() => router.push("/signup")}
-            >
+            <Pressable style={{ marginTop: 15 }} onPress={() => router.push("/signup")}>
               <Text style={authFormStyles.linkText}>Create a new account?</Text>
             </Pressable>
           </View>
@@ -108,7 +122,4 @@ const SignInForm: React.FC<SignInFormProps> = ({ setIsLoggedIn }) => {
   );
 };
 
-
-
 export default SignInForm;
-

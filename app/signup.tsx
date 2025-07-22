@@ -1,3 +1,4 @@
+// components/SignUpForm.tsx
 import React, { useState } from "react";
 import {
   View,
@@ -11,7 +12,7 @@ import { supabase } from "../lib/supabase";
 import { router } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import Header from "../components/header_item";
-import authFormStyles from "../components/styles"; 
+import authFormStyles from "../components/styles";
 
 export default function SignUpForm() {
   const [firstName, setFirstName] = useState("");
@@ -44,6 +45,12 @@ export default function SignUpForm() {
     const { data, error } = await supabase.auth.signUp({
       email: email.trim(),
       password: password.trim(),
+      options: {
+        data: {
+          first_name: firstName,
+          last_name: lastName,
+        },
+      },
     });
 
     if (error) {
@@ -51,28 +58,10 @@ export default function SignUpForm() {
       return;
     }
 
-    const userId = data.user?.id ?? data.session?.user.id;
-    if (!userId) {
-      Alert.alert("Signup failed", "No user ID available.");
-      return;
-    }
-
-    const { error: insertError } = await supabase
-      .from("user_details")
-      .insert({
-        uuid: userId,
-        first_name: firstName,
-        last_name: lastName,
-        email: email.trim(),
-      });
-
-    if (insertError) {
-      Alert.alert("Signup failed: could not save user info", insertError.message);
-      return;
-    }
-
-    await supabase.auth.signOut();
-    Alert.alert("Success", "Account created! Please log in.");
+    Alert.alert(
+      "Almost there!",
+      "Please check your email to verify your account before logging in."
+    );
     router.replace("/");
   };
 
@@ -144,6 +133,3 @@ export default function SignUpForm() {
     </LinearGradient>
   );
 }
-
-
-
