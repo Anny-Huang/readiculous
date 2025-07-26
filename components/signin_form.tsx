@@ -13,6 +13,7 @@ import { supabase } from "../lib/supabase";
 import { LinearGradient } from "expo-linear-gradient";
 import Header from "./header_item";
 import authFormStyles from "./styles";
+import * as Notifications from "expo-notifications";
 
 interface SignInFormProps {
   setIsLoggedIn?: (isLoggedIn: boolean) => void;

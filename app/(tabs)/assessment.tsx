@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import Header from "../../components/header_item";
 import AssessmentFormModal, { AssessmentInput } from "../../components/assessment_modal";
+import { requestNotificationPermissions } from "../../lib/notifications"; 
 
 export default function AssessmentPage() {
   const [assessments, setAssessments] = useState([]);
@@ -13,6 +14,8 @@ export default function AssessmentPage() {
 
   // Fetch user ID once
   useEffect(() => {
+    // Request notification permissions
+    requestNotificationPermissions();
     const fetchUserId = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
@@ -26,6 +29,7 @@ export default function AssessmentPage() {
       }
     };
     fetchUserId();
+    
   }, []);
 
   // Load assessments for this user

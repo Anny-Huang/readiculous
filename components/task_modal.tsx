@@ -1,4 +1,4 @@
-import React, { useState,useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -12,68 +12,56 @@ import {
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 import * as Notifications from "expo-notifications";
 
-// Types for data input & optional initial values
-export type AssessmentInput = {
+export type TaskInput = {
   title: string;
-  due_time: string;
   reminder_time?: string;
-  subject: string;
   description?: string;
 };
 
-type AssessmentFormModalProps = {
+type TaskFormModalProps = {
   visible: boolean;
   onClose: () => void;
-  onSubmit: (data: AssessmentInput) => Promise<void>;
-  onDelete?: () => Promise<void>; // only appears in edit mode
-  initialValues?: AssessmentInput & { id?: number };
+  onSubmit: (data: TaskInput) => Promise<void>;
+  onDelete?: () => Promise<void>;
+  initialValues?: TaskInput & { id?: number };
 };
 
-export default function AssessmentFormModal({
+export default function TaskFormModal({
   visible,
   onClose,
   onSubmit,
   onDelete,
   initialValues,
-}: AssessmentFormModalProps) {
+}: TaskFormModalProps) {
   const isEdit = !!initialValues;
 
   const [title, setTitle] = useState(initialValues?.title || "");
-  const [dueTime, setDueTime] = useState(initialValues?.due_time || "");
   const [reminder, setReminder] = useState(initialValues?.reminder_time || "");
-  const [subject, setSubject] = useState(initialValues?.subject || "");
   const [description, setDescription] = useState(initialValues?.description || "");
 
-  const [isDuePickerVisible, setDuePickerVisible] = useState(false);
   const [isReminderPickerVisible, setReminderPickerVisible] = useState(false);
 
   useEffect(() => {
     setTitle(initialValues?.title || "");
-    setDueTime(initialValues?.due_time || "");
     setReminder(initialValues?.reminder_time || "");
-    setSubject(initialValues?.subject || "");
     setDescription(initialValues?.description || "");
   }, [initialValues, visible]);
 
-  const handleSubmit = async () => {
-    console.log("🟢 handleSubmit called");
-  if (!title || !dueTime || !subject) {
-    Alert.alert("Missing required fields");
+const handleSubmit = async () => {
+  if (!title) {
+    Alert.alert("Missing task title");
     return;
   }
 
-  // Save assessment data
+  // Save task data to db
   await onSubmit({
     title,
-    due_time: dueTime,
     reminder_time: reminder,
-    subject,
     description,
   });
 
   if (reminder) {
-    console.log("📌 reminder =", reminder);
-
+    // Request notification permissions
     const permission = await Notifications.getPermissionsAsync();
     if (permission.status !== "granted") {
       Alert.alert("Permission not granted for notifications");
@@ -82,20 +70,20 @@ export default function AssessmentFormModal({
     }
 
     const now = new Date();
-    const targetDate = new Date(reminder);
+    const targetDate = new Date(reminder); // reminder is in ISO UTC
     const diffMs = targetDate.getTime() - now.getTime();
     const diffSec = Math.floor(diffMs / 1000);
 
     console.log("Now:", now.toString());
-    console.log("Reminder:", targetDate.toString());
+    console.log("Reminder (local):", targetDate.toString());
     console.log("Time diff (sec):", diffSec);
 
     if (!isNaN(targetDate.getTime()) && diffSec > 0) {
-      // Use timeInterval for broader compatibility (works in Expo Go)
+      // Use timeInterval for compatibility with Expo Go
       const id = await Notifications.scheduleNotificationAsync({
         content: {
-          title: "Assessment Reminder",
-          body: `Reminder for assessment: ${title}`,
+          title: "Task Reminder",
+          body: `Reminder for task: ${title}`,
         },
         trigger: {
           type: "timeInterval",
@@ -104,14 +92,16 @@ export default function AssessmentFormModal({
         } as any,
       });
 
-      console.log("✅ Notification scheduled via timeInterval:", id);
-      Alert.alert(`Assessment reminder scheduled in ${diffSec} seconds.`);
+      console.log("📅 Notification scheduled via timeInterval in", diffSec, "seconds");
+      console.log("✅ Scheduled notification ID:", id);
+
+      Alert.alert(`Notification scheduled in ${diffSec} seconds.`);
     } else {
-      // Fallback: schedule in 10 seconds
+      // Fallback: reminder in the past, use 10s
       const id = await Notifications.scheduleNotificationAsync({
         content: {
-          title: "Assessment Reminder (Fallback)",
-          body: `Reminder for assessment: ${title}`,
+          title: "Task Reminder (Fallback)",
+          body: `Reminder for task: ${title}`,
         },
         trigger: {
           type: "timeInterval",
@@ -120,8 +110,10 @@ export default function AssessmentFormModal({
         } as any,
       });
 
-      console.log("⚠️ Reminder time invalid or in the past. Fallback ID:", id);
-      Alert.alert("Reminder was invalid or in the past. Scheduled fallback in 10 seconds.");
+      console.log("⚠️ Reminder in the past. Fallback scheduled in 10s.");
+      console.log("✅ Fallback notification ID:", id);
+
+      Alert.alert("Reminder was in the past. Fallback scheduled in 10 seconds.");
     }
   }
 
@@ -129,25 +121,31 @@ export default function AssessmentFormModal({
 };
 
 
+
+
+  // Display time in local format for user clarity
   const formatDate = (iso: string) =>
-    iso ? new Date(iso).toLocaleString() : "Not set";
+    iso ? new Date(iso).toLocaleString(undefined, { timeZoneName: 'short' }) : "Not set";
 
   return (
     <Modal visible={visible} animationType="slide">
       <View style={styles.modalContainer}>
-        <Text style={styles.heading}>{isEdit ? "Edit" : "New"} Assessment</Text>
+        <Text style={styles.heading}>{isEdit ? "Edit" : "New"} Task</Text>
 
-        <TextInput placeholder="Title" style={styles.input} value={title} onChangeText={setTitle} />
+        <TextInput
+          placeholder="Title"
+          style={styles.input}
+          value={title}
+          onChangeText={setTitle}
+        />
 
-        <Pressable style={styles.pickerButton} onPress={() => setDuePickerVisible(true)}>
-          <Text style={styles.pickerText}>Due: {formatDate(dueTime)}</Text>
-        </Pressable>
-
-        <Pressable style={styles.pickerButton} onPress={() => setReminderPickerVisible(true)}>
+        <Pressable
+          style={styles.pickerButton}
+          onPress={() => setReminderPickerVisible(true)}
+        >
           <Text style={styles.pickerText}>Reminder: {formatDate(reminder)}</Text>
         </Pressable>
 
-        <TextInput placeholder="Subject" style={styles.input} value={subject} onChangeText={setSubject} />
         <TextInput
           placeholder="Description"
           style={[styles.input, { height: 80 }]}
@@ -174,19 +172,10 @@ export default function AssessmentFormModal({
         </View>
 
         <DateTimePickerModal
-          isVisible={isDuePickerVisible}
-          mode="datetime"
-          onConfirm={(date) => {
-            setDueTime(date.toISOString());
-            setDuePickerVisible(false);
-          }}
-          onCancel={() => setDuePickerVisible(false)}
-        />
-        <DateTimePickerModal
           isVisible={isReminderPickerVisible}
           mode="datetime"
           onConfirm={(date) => {
-            setReminder(date.toISOString());
+            setReminder(date.toISOString()); // store UTC time
             setReminderPickerVisible(false);
           }}
           onCancel={() => setReminderPickerVisible(false)}

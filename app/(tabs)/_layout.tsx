@@ -1,7 +1,13 @@
 import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { requestNotificationPermissions } from "../../lib/notifications";
+import { useEffect } from "react";
+import * as Notifications from "expo-notifications";
 
 export default function TabsLayout() {
+    useEffect(() => {
+    requestNotificationPermissions();
+  }, []);
   return (
     <Tabs
       screenOptions={({ route }) => ({

@@ -1,11 +1,14 @@
+
 // i did download the package for notifications, but i am not using it in this file
 // don't forget to finish it
 import { View, Text, ScrollView, StyleSheet, Pressable, Button, Alert, TouchableOpacity } from "react-native";
 import { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import Header from "../../components/header_item";
-import TaskForm, { TaskInput } from "../../components/task_form";
+import TaskForm, { TaskInput } from "../../components/task_modal";
 import { Ionicons } from "@expo/vector-icons"; // for checkbox icons
+import { requestNotificationPermissions } from "../../lib/notifications"; 
+import TestNotificationButton from "../../components/test_notification";
 
 type Task = {
   id: number;
@@ -24,6 +27,8 @@ export default function TaskPage() {
 
   // 1. Load user_id once
   useEffect(() => {
+    // Request notification permissions
+    requestNotificationPermissions();
     const fetchUserId = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) setUserId(user.id);
@@ -144,7 +149,7 @@ export default function TaskPage() {
     <View style={{ flex: 1, padding: 16 }}>
       <Header title="Readiculous" showLogout />
       <Text style={styles.heading}>Task List</Text>
-
+      <TestNotificationButton />
       {/* Floating + Add button */}
       <TouchableOpacity style={styles.fab} onPress={openNew}>
         <Ionicons name="add" size={32} color="#fff" />
