@@ -1,15 +1,15 @@
 import { View, Text, TextInput, Button, ScrollView, StyleSheet, Alert, Pressable, Modal } from "react-native";
 import { useEffect, useState } from "react";
-import { supabase } from "../../lib/supabase";
-import Header from "../../components/header_item";
+import { supabase } from "../lib/supabase";
+import Header from "../components/header_item";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 import { useRouter } from "expo-router";
 
 export default function Assessment() {
   const [assessments, setAssessments] = useState([]);
   const [modalVisible, setModalVisible] = useState(false);
-  const [editingAssessment, setEditingAssessment] = useState(null); // track if editing
 
+  // Form fields
   const [title, setTitle] = useState("");
   const [dueTime, setDueTime] = useState("");
   const [reminder, setReminder] = useState("");
@@ -17,11 +17,13 @@ export default function Assessment() {
   const [description, setDescription] = useState("");
   const [userId, setUserId] = useState(null);
 
+  // DateTime picker states
   const [isDuePickerVisible, setDuePickerVisible] = useState(false);
   const [isReminderPickerVisible, setReminderPickerVisible] = useState(false);
 
   const router = useRouter();
 
+  // Load user ID
   useEffect(() => {
     const fetchUserId = async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -38,27 +40,8 @@ export default function Assessment() {
     fetchUserId();
   }, []);
 
-  const openNewModal = () => {
-    setEditingAssessment(null);
-    setTitle("");
-    setDueTime("");
-    setReminder("");
-    setSubject("");
-    setDescription("");
-    setModalVisible(true);
-  };
-
-  const openEditModal = (assessment) => {
-    setEditingAssessment(assessment);
-    setTitle(assessment.title);
-    setDueTime(assessment.due_time);
-    setReminder(assessment.reminder_time || "");
-    setSubject(assessment.subject);
-    setDescription(assessment.description || "");
-    setModalVisible(true);
-  };
-
-  const handleSubmit = async () => {
+  // Add new assessment to DB
+  const handleAdd = async () => {
     if (!userId) {
       Alert.alert("User not loaded", "Please wait while we fetch user ID.");
       return;
@@ -68,40 +51,26 @@ export default function Assessment() {
       return;
     }
 
-    let result;
-    if (editingAssessment) {
-      result = await supabase
-        .from("assessments")
-        .update({
-          title,
-          due_time: new Date(dueTime),
-          reminder_time: reminder ? new Date(reminder) : null,
-          subject,
-          description,
-        })
-        .eq("id", editingAssessment.id);
-    } else {
-      result = await supabase.from("assessments").insert({
-        user_id: userId,
-        title,
-        due_time: new Date(dueTime),
-        reminder_time: reminder ? new Date(reminder) : null,
-        subject,
-        description,
-      });
-    }
+    const { error } = await supabase.from("assessments").insert({
+      user_id: userId,
+      title,
+      due_time: new Date(dueTime),
+      reminder_time: reminder ? new Date(reminder) : null,
+      subject,
+      description,
+    });
 
-    const { error } = result;
     if (error) {
       Alert.alert("Error", error.message);
     } else {
       setTitle(""); setDueTime(""); setReminder(""); setSubject(""); setDescription("");
       setModalVisible(false);
       fetchAssessments();
-      Alert.alert("Success", editingAssessment ? "Assessment updated." : "Assessment added.");
+      Alert.alert("Success", "Assessment added successfully.");
     }
   };
 
+  // Fetch all assessments
   const fetchAssessments = async () => {
     if (!userId) return;
     const { data, error } = await supabase
@@ -125,11 +94,13 @@ export default function Assessment() {
       <Header title="Readiculous" showLogout />
       <Text style={styles.heading}>Assessments</Text>
 
-      <Button title="+" onPress={openNewModal} />
+      {/* Open modal to add */}
+      <Button title="+" onPress={() => setModalVisible(true)} />
 
+      {/* Modal for add/edit form */}
       <Modal visible={modalVisible} animationType="slide">
         <View style={styles.modalContainer}>
-          <Text style={styles.heading}>{editingAssessment ? "Edit" : "New"} Assessment</Text>
+          <Text style={styles.heading}>New Assessment</Text>
 
           <TextInput placeholder="Title" style={styles.input} value={title} onChangeText={setTitle} />
 
@@ -144,43 +115,10 @@ export default function Assessment() {
           <TextInput placeholder="Subject" style={styles.input} value={subject} onChangeText={setSubject} />
           <TextInput placeholder="Description" style={[styles.input, { height: 80 }]} value={description} onChangeText={setDescription} multiline />
 
-          <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 10 }}>
-  <Button title="Cancel" color="gray" onPress={() => setModalVisible(false)} />
-  {editingAssessment && (
-    <Button
-      title="Delete"
-      color="crimson"
-      onPress={() => {
-        Alert.alert(
-          "Confirm Delete",
-          "Are you sure you want to delete this assessment?",
-          [
-            { text: "Cancel", style: "cancel" },
-            {
-              text: "Delete",
-              style: "destructive",
-              onPress: async () => {
-                const { error } = await supabase
-                  .from("assessments")
-                  .delete()
-                  .eq("id", editingAssessment.id);
-                if (error) Alert.alert("Error", error.message);
-                else {
-                  setModalVisible(false);
-                  setEditingAssessment(null);
-                  fetchAssessments();
-                  Alert.alert("Deleted", "Assessment has been deleted.");
-                }
-              },
-            },
-          ]
-        );
-      }}
-    />
-  )}
-  <Button title={editingAssessment ? "Update" : "Save"} onPress={handleSubmit} />
-</View>
-
+          <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+            <Button title="Cancel" color="gray" onPress={() => setModalVisible(false)} />
+            <Button title="Save" onPress={handleAdd} />
+          </View>
 
           <DateTimePickerModal
             isVisible={isDuePickerVisible}
@@ -197,15 +135,16 @@ export default function Assessment() {
         </View>
       </Modal>
 
+      {/* List of assessments */}
       <ScrollView style={{ marginTop: 16 }}>
         {assessments.map((a, index) => (
-          <Pressable key={index} style={styles.card} onPress={() => openEditModal(a)}>
+          <View key={index} style={styles.card}>
             <Text style={styles.title}>{a.title}</Text>
             <Text>Subject: {a.subject}</Text>
             <Text>Due: {new Date(a.due_time).toLocaleString()}</Text>
             <Text>Reminder: {a.reminder_time ? new Date(a.reminder_time).toLocaleString() : "None"}</Text>
             <Text>Description: {a.description}</Text>
-          </Pressable>
+          </View>
         ))}
       </ScrollView>
     </View>

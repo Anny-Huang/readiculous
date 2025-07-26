@@ -53,15 +53,15 @@ const SignInForm: React.FC<SignInFormProps> = ({ setIsLoggedIn }) => {
     const user = data.user;
     const { data: existing, error: fetchError } = await supabase
       .from("user_details")
-      .select("uuid")
-      .eq("uuid", user.id)
+      .select("user_id")
+      .eq("user_id", user.id)
       .single();
 
     if (!existing) {
       const { first_name, last_name } = user.user_metadata;
 
       const { error: insertError } = await supabase.from("user_details").insert({
-        uuid: user.id,
+        user_id: user.id,
         email: user.email,
         first_name,
         last_name,
