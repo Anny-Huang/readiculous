@@ -8,6 +8,10 @@ import {
   StyleSheet,
   Pressable,
   Alert,
+  KeyboardAvoidingView,
+  TouchableWithoutFeedback,
+  Keyboard,
+  Platform,
 } from "react-native";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 import * as Notifications from "expo-notifications";
@@ -38,7 +42,6 @@ export default function TaskFormModal({
   const [title, setTitle] = useState(initialValues?.title || "");
   const [reminder, setReminder] = useState(initialValues?.reminder_time || "");
   const [description, setDescription] = useState(initialValues?.description || "");
-
   const [isReminderPickerVisible, setReminderPickerVisible] = useState(false);
 
   useEffect(() => {
@@ -47,140 +50,127 @@ export default function TaskFormModal({
     setDescription(initialValues?.description || "");
   }, [initialValues, visible]);
 
-const handleSubmit = async () => {
-  if (!title) {
-    Alert.alert("Missing task title");
-    return;
-  }
-
-  // Save task data to db
-  await onSubmit({
-    title,
-    reminder_time: reminder,
-    description,
-  });
-
-  if (reminder) {
-    // Request notification permissions
-    const permission = await Notifications.getPermissionsAsync();
-    if (permission.status !== "granted") {
-      Alert.alert("Permission not granted for notifications");
-      onClose();
+  const handleSubmit = async () => {
+    if (!title) {
+      Alert.alert("Missing task title");
       return;
     }
 
-    const now = new Date();
-    const targetDate = new Date(reminder); // reminder is in ISO UTC
-    const diffMs = targetDate.getTime() - now.getTime();
-    const diffSec = Math.floor(diffMs / 1000);
+    await onSubmit({
+      title,
+      reminder_time: reminder,
+      description,
+    });
 
-    console.log("Now:", now.toString());
-    console.log("Reminder (local):", targetDate.toString());
-    console.log("Time diff (sec):", diffSec);
+    if (reminder) {
+      const permission = await Notifications.getPermissionsAsync();
+      if (permission.status !== "granted") {
+        Alert.alert("Permission not granted for notifications");
+        onClose();
+        return;
+      }
 
-    if (!isNaN(targetDate.getTime()) && diffSec > 0) {
-      // Use timeInterval for compatibility with Expo Go
-      const id = await Notifications.scheduleNotificationAsync({
-        content: {
-          title: "Task Reminder",
-          body: `Reminder for task: ${title}`,
-        },
-        trigger: {
-          type: "timeInterval",
-          seconds: diffSec,
-          repeats: false,
-        } as any,
-      });
+      const now = new Date();
+      const localReminderDate = new Date(reminder);
+      const diffMs = localReminderDate.getTime() - now.getTime();
+      const diffSec = Math.floor(diffMs / 1000);
 
-      console.log("📅 Notification scheduled via timeInterval in", diffSec, "seconds");
-      console.log("✅ Scheduled notification ID:", id);
+      if (!isNaN(localReminderDate.getTime()) && diffSec > 0) {
+        const id = await Notifications.scheduleNotificationAsync({
+          content: {
+            title: "Task Reminder",
+            body: `Reminder for task: ${title}`,
+          },
+          trigger: {
+            seconds: diffSec,
+            repeats: false,
+          },
+        });
 
-      Alert.alert(`Notification scheduled in ${diffSec} seconds.`);
-    } else {
-      // Fallback: reminder in the past, use 10s
-      const id = await Notifications.scheduleNotificationAsync({
-        content: {
-          title: "Task Reminder (Fallback)",
-          body: `Reminder for task: ${title}`,
-        },
-        trigger: {
-          type: "timeInterval",
-          seconds: 10,
-          repeats: false,
-        } as any,
-      });
+        Alert.alert(`Notification scheduled in ${diffSec} seconds.`);
+      } else {
+        const id = await Notifications.scheduleNotificationAsync({
+          content: {
+            title: "Task Reminder (Fallback)",
+            body: `Reminder for task: ${title}`,
+          },
+          trigger: {
+            seconds: 10,
+            repeats: false,
+          },
+        });
 
-      console.log("⚠️ Reminder in the past. Fallback scheduled in 10s.");
-      console.log("✅ Fallback notification ID:", id);
-
-      Alert.alert("Reminder was in the past. Fallback scheduled in 10 seconds.");
+        Alert.alert("Reminder was in the past. Fallback scheduled in 10 seconds.");
+      }
     }
-  }
 
-  onClose();
-};
+    onClose();
+  };
 
-
-
-
-  // Display time in local format for user clarity
   const formatDate = (iso: string) =>
-    iso ? new Date(iso).toLocaleString(undefined, { timeZoneName: 'short' }) : "Not set";
+    iso ? new Date(iso).toLocaleString(undefined, { timeZoneName: "short" }) : "Not set";
 
   return (
     <Modal visible={visible} animationType="slide">
-      <View style={styles.modalContainer}>
-        <Text style={styles.heading}>{isEdit ? "Edit" : "New"} Task</Text>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      >
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+          <View style={styles.modalContainer}>
+            <Text style={styles.heading}>{isEdit ? "Edit" : "New"} Task</Text>
 
-        <TextInput
-          placeholder="Title"
-          style={styles.input}
-          value={title}
-          onChangeText={setTitle}
-        />
-
-        <Pressable
-          style={styles.pickerButton}
-          onPress={() => setReminderPickerVisible(true)}
-        >
-          <Text style={styles.pickerText}>Reminder: {formatDate(reminder)}</Text>
-        </Pressable>
-
-        <TextInput
-          placeholder="Description"
-          style={[styles.input, { height: 80 }]}
-          value={description}
-          onChangeText={setDescription}
-          multiline
-        />
-
-        <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 10 }}>
-          <Button title="Cancel" color="gray" onPress={onClose} />
-          {isEdit && onDelete && (
-            <Button
-              title="Delete"
-              color="crimson"
-              onPress={() => {
-                Alert.alert("Confirm Delete", "Are you sure?", [
-                  { text: "Cancel", style: "cancel" },
-                  { text: "Delete", style: "destructive", onPress: onDelete },
-                ]);
-              }}
+            <TextInput
+              placeholder="Title"
+              style={styles.input}
+              value={title}
+              onChangeText={setTitle}
             />
-          )}
-          <Button title={isEdit ? "Update" : "Save"} onPress={handleSubmit} />
-        </View>
 
-        <DateTimePickerModal
-          isVisible={isReminderPickerVisible}
-          mode="datetime"
-          onConfirm={(date) => {
-            setReminder(date.toISOString()); // store UTC time
-            setReminderPickerVisible(false);
-          }}
-          onCancel={() => setReminderPickerVisible(false)}
-        />
-      </View>
+            <Pressable
+              style={styles.pickerButton}
+              onPress={() => setReminderPickerVisible(true)}
+            >
+              <Text style={styles.pickerText}>Reminder: {formatDate(reminder)}</Text>
+            </Pressable>
+
+            <TextInput
+              placeholder="Description"
+              style={[styles.input, { height: 80 }]}
+              value={description}
+              onChangeText={setDescription}
+              multiline
+            />
+
+            <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 10 }}>
+              <Button title="Cancel" color="gray" onPress={onClose} />
+              {isEdit && onDelete && (
+                <Button
+                  title="Delete"
+                  color="crimson"
+                  onPress={() => {
+                    Alert.alert("Confirm Delete", "Are you sure?", [
+                      { text: "Cancel", style: "cancel" },
+                      { text: "Delete", style: "destructive", onPress: onDelete },
+                    ]);
+                  }}
+                />
+              )}
+              <Button title={isEdit ? "Update" : "Save"} onPress={handleSubmit} />
+            </View>
+
+            <DateTimePickerModal
+              isVisible={isReminderPickerVisible}
+              mode="datetime"
+              onConfirm={(date) => {
+                setReminder(date.toISOString());
+                setReminderPickerVisible(false);
+              }}
+              onCancel={() => setReminderPickerVisible(false)}
+            />
+          </View>
+        </TouchableWithoutFeedback>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
