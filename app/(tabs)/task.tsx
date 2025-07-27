@@ -1,14 +1,20 @@
-
-// i did download the package for notifications, but i am not using it in this file
-// don't forget to finish it
-import { View, Text, ScrollView, StyleSheet, Pressable, Button, Alert, TouchableOpacity } from "react-native";
+import {
+  View,
+  Text,
+  ScrollView,
+  StyleSheet,
+  Pressable,
+  Alert,
+  TouchableOpacity,
+} from "react-native";
 import { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import Header from "../../components/header_item";
 import TaskForm, { TaskInput } from "../../components/task_modal";
 import { Ionicons } from "@expo/vector-icons"; // for checkbox icons
-import { requestNotificationPermissions } from "../../lib/notifications"; 
+import { requestNotificationPermissions } from "../../lib/notifications";
 import TestNotificationButton from "../../components/test_notification";
+import { LinearGradient } from "expo-linear-gradient";
 
 type Task = {
   id: number;
@@ -30,7 +36,9 @@ export default function TaskPage() {
     // Request notification permissions
     requestNotificationPermissions();
     const fetchUserId = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (user) setUserId(user.id);
     };
     fetchUserId();
@@ -73,7 +81,9 @@ export default function TaskPage() {
     const payload = {
       ...input,
       user_id: userId,
-      reminder_time: input.reminder_time ? new Date(input.reminder_time) : null,
+      reminder_time: input.reminder_time
+        ? new Date(input.reminder_time)
+        : null,
     };
 
     if (editingTask) {
@@ -146,16 +156,31 @@ export default function TaskPage() {
   const grouped = groupByDate(tasks);
 
   return (
-    <View style={{ flex: 1, padding: 16 }}>
+    // Gradient background wrapper
+    <LinearGradient
+      colors={["#f0f8ff", "#44a0fcff"]}
+      style={{ flex: 1 }}
+    >
       <Header title="Readiculous" showLogout />
-      <Text style={styles.heading}>Task List</Text>
-      <TestNotificationButton />
+
+      {/* Page title */}
+      <View style={styles.titleviewcard}>
+        <Text style={styles.pageTitle}>Task List</Text>
+      </View>
+
+      {/* Here was a test notification button
+      want to try it? just uncomment the following
+      and go to task page.
+      it needs 10s to push a new notification. */}
+
+      {/* <TestNotificationButton /> */}
+
       {/* Floating + Add button */}
       <TouchableOpacity style={styles.fab} onPress={openNew}>
         <Ionicons name="add" size={32} color="#fff" />
       </TouchableOpacity>
 
-      {/* Grouped list */}
+      {/* Grouped task list */}
       <ScrollView style={{ marginTop: 16 }}>
         {Object.entries(grouped).map(([date, items]) => (
           <View key={date}>
@@ -171,7 +196,10 @@ export default function TaskPage() {
                     <Text
                       style={[
                         styles.title,
-                        task.completed && { textDecorationLine: "line-through", color: "gray" },
+                        task.completed && {
+                          textDecorationLine: "line-through",
+                          color: "gray",
+                        },
                       ]}
                     >
                       {task.title}
@@ -200,24 +228,44 @@ export default function TaskPage() {
         onDelete={editingTask ? handleDelete : undefined}
         initialValues={editingTask ?? undefined}
       />
-    </View>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
-  heading: { fontSize: 24, fontWeight: "bold", marginBottom: 12 },
+pageTitle: {
+    fontSize: 28,
+    fontWeight: "bold",
+    textAlign: "center",
+  },
   dateGroup: {
+    marginLeft: 16,
     fontSize: 18,
     fontWeight: "600",
     marginTop: 20,
     marginBottom: 8,
     color: "#333",
   },
+  titleviewcard: {
+    backgroundColor: "#B6D3FF",
+    borderRadius: 15,
+    paddingVertical: 15,
+    paddingHorizontal: 15,
+    marginVertical: 20,
+    width: "90%",
+    alignSelf: "center",
+  },
   card: {
-    backgroundColor: "#f6faff",
+    backgroundColor: "#fff",
     padding: 12,
     borderRadius: 10,
     marginBottom: 10,
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: 1 },
+    shadowRadius: 2,
+    marginHorizontal:16,
   },
   title: {
     fontWeight: "bold",

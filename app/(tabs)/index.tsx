@@ -5,6 +5,8 @@ import { supabase } from "../../lib/supabase";
 import Header from "../../components/header_item";
 import TaskFormModal from "../../components/task_modal"; // Task modal component
 import AssessmentFormModal from "../../components/assessment_modal";
+import { LinearGradient } from "expo-linear-gradient";
+
 
 export default function Dashboard() {
   const [fullName, setFullName] = useState("");
@@ -36,17 +38,21 @@ export default function Dashboard() {
   useEffect(() => {
     const checkAuth = async () => {
       const { data: { user } } = await supabase.auth.getUser();
+      
       if (!user) {
         router.replace("/");
         return;
       }
       setUserId(user.id);
+      
 
       const { data, error } = await supabase
         .from("user_details")
         .select("first_name, last_name")
-        .eq("uuid", user.id)
+        .eq("user_id", user.id)
         .single();
+
+        //console.log("Fetched user_details:", { data, error });
 
       if (!error && data) {
         setFullName(`${data.first_name} ${data.last_name}`);
@@ -98,53 +104,74 @@ export default function Dashboard() {
   const totalTodos = todayTasks.length + todayAssessments.length;
 
   return (
-    <View style={{ flex: 1 }}>
-      <Header title="Readiculous" showLogout />
-      <Text style={{ fontSize: 28, fontWeight: "bold", marginTop: 20, textAlign: "center" }}>
-        {fullName ? `Welcome, ${fullName}!` : "Welcome to our new app!"}
-      </Text>
+  <View style={{ flex: 1 }}>
+    <Header title="Readiculous" showLogout />
+
+    <LinearGradient
+      colors={["#f0f8ff", "#44a0fcff"]}
+      style={{ flex: 1, paddingHorizontal: 20, paddingTop: 10 }}
+    >
+      <View
+        style={styles.titleviewcard}
+      >
+        {/* <View style={{ flex:1, width: "100%", alignItems: "center"}}> */}
+          <Text style={styles.welcomemsg}>
+            {/* show first name in welcome message? */}
+            {/* use this: */}
+            {/* fullName.split(" ")[0] */}
+
+          {fullName ? `Welcome ${fullName} !` : "Welcome!"}
+        </Text>
+        {/* </View> */}
+      </View>
 
       <Text style={styles.todoHeader}>You Have</Text>
       <Text style={styles.todoCount}>{totalTodos}</Text>
-      <Text style={styles.todoSubtext}>To-Dos Today.</Text>
+      <Text style={styles.todoHeader}>To-Dos Today.</Text>
 
-      {/* Manual refresh button */}
-      <Button title="🔄 Refresh" onPress={() => setRefreshFlag(!refreshFlag)} />
+      <View style={{ alignItems: "center", marginVertical: 10 }}>
+        <Button title="🔄 REFRESH" onPress={() => setRefreshFlag(!refreshFlag)} />
+      </View>
 
-      <View style={styles.todoCard}>
-        <Text style={styles.sectionHeader}>Assessment</Text>
-        {todayAssessments.length === 0 ? (
-          <Text style={styles.todoItem}>None</Text>
-        ) : (
-          // Tap to open assessment modal
-          todayAssessments.map((a) => (
-            <Pressable
-              key={a.id}
-              onPress={() => {
-                setSelectedAssessment(a);
-                setAssessmentModalVisible(true);
-              }}
-            >
-              <Text style={styles.todoItem}>{a.title}</Text>
-            </Pressable>
-          ))
-        )}
+    <View style={styles.todoCard}>
+      <Text style={styles.sectionHeader}>Assessment</Text>
+      {todayAssessments.length === 0 ? (
+        <Text style={styles.todoItem}>None</Text>
+      ) : (
+        todayAssessments.map((a) => (
+          <Pressable
+            key={a.id}
+            onPress={() => {
+              setSelectedAssessment(a);
+              setAssessmentModalVisible(true);
+            }}
+          >
+            <Text style={styles.todoItem}>{a.title}</Text>
+          </Pressable>
+        ))
+      )}
 
-        <Text style={styles.sectionHeader}>Task</Text>
-        {todayTasks.length === 0 ? (
-          <Text style={styles.todoItem}>None</Text>
-        ) : (
-          todayTasks.map((t) => (
-            // Tap to open task modal
-            <Pressable key={t.id} onPress={() => {
+      <Text style={styles.sectionHeader}>Task</Text>
+      {todayTasks.length === 0 ? (
+        <Text style={styles.todoItem}>None</Text>
+      ) : (
+        todayTasks.map((t) => (
+          <Pressable
+            key={t.id}
+            onPress={() => {
               setSelectedTask(t);
               setModalVisible(true);
-            }}>
-              <Text style={styles.todoItem}>{t.title}</Text>
-            </Pressable>
-          ))
-        )}
-      </View>
+            }}
+          >
+            <Text style={styles.todoItem}>{t.title}</Text>
+          </Pressable>
+        ))
+      )}
+    </View>
+    </LinearGradient>
+
+      {/*the 2 Modals for adding/editing tasks */}
+
       {/* Modal for editing assessment */}
       <AssessmentFormModal
         visible={assessmentModalVisible}
@@ -216,9 +243,24 @@ export default function Dashboard() {
 
 const styles = StyleSheet.create({
   todoHeader: {
-    fontSize: 20,
+    fontSize: 28,
     fontWeight: "600",
     textAlign: "center",
+    marginVertical: 10,
+  },
+  titleviewcard: {
+    backgroundColor: "#B6D3FF",
+    borderRadius: 15,
+    paddingVertical: 15,
+    paddingHorizontal: 15,
+    marginVertical: 20,
+    width: "90%",
+    alignSelf: "center",
+  },
+  welcomemsg: {
+    fontSize: 28,
+    fontWeight: "bold",
+    textAlign: "center", 
   },
   todoCount: {
     fontSize: 30,

@@ -13,18 +13,19 @@
     "@react-native-community/datetimepicker": "^8.4.1",
     "@supabase/supabase-js": "^2.52.0",
     "expo": "~53.0.20",
+    "expo-device": "~7.1.4",
     "expo-linear-gradient": "~14.1.5",
+    "expo-notifications": "~0.31.4",
     "expo-router": "^5.1.4",
     "expo-status-bar": "~2.2.3",
     "react": "19.0.0",
     "react-native": "0.79.5",
-    "react-native-modal-datetime-picker": "^18.0.0",
-    "expo-notifications": "~0.31.4",
-    "expo-device": "~7.1.4"
+    "react-native-modal-datetime-picker": "^18.0.0"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",
     "@types/react": "~19.0.10",
+    "@types/react-native": "^0.72.8",
     "typescript": "~5.8.3"
   },
   "private": true
