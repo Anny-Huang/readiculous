@@ -6,15 +6,11 @@ import {
   Button,
   Modal,
   StyleSheet,
-  Pressable,
   Alert,
-  Keyboard,
-  TouchableWithoutFeedback,
 } from "react-native";
-import DateTimePickerModal from "react-native-modal-datetime-picker";
-import * as Notifications from "expo-notifications";
+import { scheduleNotification } from "../lib/notifications";
+import DateTimeField from "../components/DateTimeField";
 
-// Types for data input & optional initial values
 export type AssessmentInput = {
   title: string;
   due_time: string;
@@ -27,7 +23,7 @@ type AssessmentFormModalProps = {
   visible: boolean;
   onClose: () => void;
   onSubmit: (data: AssessmentInput) => Promise<void>;
-  onDelete?: () => Promise<void>; // only appears in edit mode
+  onDelete?: () => Promise<void>;
   initialValues?: AssessmentInput & { id?: number };
 };
 
@@ -46,9 +42,6 @@ export default function AssessmentFormModal({
   const [subject, setSubject] = useState(initialValues?.subject || "");
   const [description, setDescription] = useState(initialValues?.description || "");
 
-  const [isDuePickerVisible, setDuePickerVisible] = useState(false);
-  const [isReminderPickerVisible, setReminderPickerVisible] = useState(false);
-
   useEffect(() => {
     setTitle(initialValues?.title || "");
     setDueTime(initialValues?.due_time || "");
@@ -58,15 +51,11 @@ export default function AssessmentFormModal({
   }, [initialValues, visible]);
 
   const handleSubmit = async () => {
-    Keyboard.dismiss(); // 👈 Hide the keyboard
-
-    console.log("🟢 handleSubmit called");
     if (!title || !dueTime || !subject) {
       Alert.alert("Missing required fields");
       return;
     }
 
-    // Save assessment data
     await onSubmit({
       title,
       due_time: dueTime,
@@ -76,125 +65,82 @@ export default function AssessmentFormModal({
     });
 
     if (reminder) {
-      console.log("📌 reminder =", reminder);
-
-      const permission = await Notifications.getPermissionsAsync();
-      if (permission.status !== "granted") {
-        Alert.alert("Permission not granted for notifications");
-        onClose();
-        return;
-      }
-
+      const reminderDate = new Date(reminder);
       const now = new Date();
-      const targetDate = new Date(reminder);
-      const diffMs = targetDate.getTime() - now.getTime();
-      const diffSec = Math.floor(diffMs / 1000);
 
-      console.log("Now:", now.toString());
-      console.log("Reminder:", targetDate.toString());
-      console.log("Time diff (sec):", diffSec);
-
-      if (!isNaN(targetDate.getTime()) && diffSec > 0) {
-        const id = await Notifications.scheduleNotificationAsync({
-          content: {
-            title: "Assessment Reminder",
-            body: `Reminder for assessment: ${title}`,
-          },
-          trigger: {
-            type: "timeInterval",
-            seconds: diffSec,
-            repeats: false,
-          } as any,
-        });
-
-        console.log("✅ Notification scheduled via timeInterval:", id);
-        Alert.alert(`Assessment reminder scheduled in ${diffSec} seconds.`);
+      if (reminderDate.getTime() <= now.getTime()) {
+        Alert.alert("Reminder is in the past. No notification scheduled.");
       } else {
-        const id = await Notifications.scheduleNotificationAsync({
-          content: {
-            title: "Assessment Reminder (Fallback)",
-            body: `Reminder for assessment: ${title}`,
-          },
-          trigger: {
-            type: "timeInterval",
-            seconds: 10,
-            repeats: false,
-          } as any,
-        });
-
-        console.log("⚠️ Reminder time invalid or in the past. Fallback ID:", id);
-        Alert.alert("Reminder was invalid or in the past. Scheduled fallback in 10 seconds.");
+        try {
+          await scheduleNotification(
+            "Assessment Reminder",
+            `Reminder for assessment: ${title}`,
+            reminderDate
+          );
+          Alert.alert("✅ Reminder notification scheduled!");
+        } catch (err) {
+          Alert.alert("❌ Failed to schedule notification.");
+        }
       }
     }
 
     onClose();
   };
 
-  const formatDate = (iso: string) =>
-    iso ? new Date(iso).toLocaleString() : "Not set";
-
   return (
     <Modal visible={visible} animationType="slide">
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <View style={styles.modalContainer}>
-          <Text style={styles.heading}>{isEdit ? "Edit" : "New"} Assessment</Text>
+      <View style={styles.modalContainer}>
+        <Text style={styles.heading}>{isEdit ? "Edit" : "New"} Assessment</Text>
 
-          <TextInput placeholder="Title" style={styles.input} value={title} onChangeText={setTitle} />
+        <TextInput
+          placeholder="Title"
+          style={styles.input}
+          value={title}
+          onChangeText={setTitle}
+        />
 
-          <Pressable style={styles.pickerButton} onPress={() => setDuePickerVisible(true)}>
-            <Text style={styles.pickerText}>Due: {formatDate(dueTime)}</Text>
-          </Pressable>
+        <DateTimeField label="Due" value={dueTime} onChange={setDueTime} />
 
-          <Pressable style={styles.pickerButton} onPress={() => setReminderPickerVisible(true)}>
-            <Text style={styles.pickerText}>Reminder: {formatDate(reminder)}</Text>
-          </Pressable>
+        <DateTimeField
+          label="Reminder"
+          value={reminder}
+          onChange={setReminder}
+          compareTo={dueTime}
+          mustBeBefore
+        />
 
-          <TextInput placeholder="Subject" style={styles.input} value={subject} onChangeText={setSubject} />
-          <TextInput
-            placeholder="Description"
-            style={[styles.input, { height: 80 }]}
-            value={description}
-            onChangeText={setDescription}
-            multiline
-          />
+        <TextInput
+          placeholder="Subject"
+          style={styles.input}
+          value={subject}
+          onChangeText={setSubject}
+        />
 
-          <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 10 }}>
-            <Button title="Cancel" color="gray" onPress={onClose} />
-            {isEdit && onDelete && (
-              <Button
-                title="Delete"
-                color="crimson"
-                onPress={() => {
-                  Alert.alert("Confirm Delete", "Are you sure?", [
-                    { text: "Cancel", style: "cancel" },
-                    { text: "Delete", style: "destructive", onPress: onDelete },
-                  ]);
-                }}
-              />
-            )}
-            <Button title={isEdit ? "Update" : "Save"} onPress={handleSubmit} />
-          </View>
+        <TextInput
+          placeholder="Description"
+          style={[styles.input, { height: 80 }]}
+          value={description}
+          onChangeText={setDescription}
+          multiline
+        />
 
-          <DateTimePickerModal
-            isVisible={isDuePickerVisible}
-            mode="datetime"
-            onConfirm={(date) => {
-              setDueTime(date.toISOString());
-              setDuePickerVisible(false);
-            }}
-            onCancel={() => setDuePickerVisible(false)}
-          />
-          <DateTimePickerModal
-            isVisible={isReminderPickerVisible}
-            mode="datetime"
-            onConfirm={(date) => {
-              setReminder(date.toISOString());
-              setReminderPickerVisible(false);
-            }}
-            onCancel={() => setReminderPickerVisible(false)}
-          />
+        <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 10 }}>
+          <Button title="Cancel" color="gray" onPress={onClose} />
+          {isEdit && onDelete && (
+            <Button
+              title="Delete"
+              color="crimson"
+              onPress={() => {
+                Alert.alert("Confirm Delete", "Are you sure?", [
+                  { text: "Cancel", style: "cancel" },
+                  { text: "Delete", style: "destructive", onPress: onDelete },
+                ]);
+              }}
+            />
+          )}
+          <Button title={isEdit ? "Update" : "Save"} onPress={handleSubmit} />
         </View>
-      </TouchableWithoutFeedback>
+      </View>
     </Modal>
   );
 }
@@ -207,18 +153,6 @@ const styles = StyleSheet.create({
     padding: 10,
     marginBottom: 10,
     borderRadius: 8,
-  },
-  pickerButton: {
-    borderWidth: 1,
-    borderColor: "#ccc",
-    padding: 12,
-    marginBottom: 10,
-    borderRadius: 8,
-    backgroundColor: "#f9f9f9",
-  },
-  pickerText: {
-    fontSize: 16,
-    color: "#333",
   },
   modalContainer: {
     flex: 1,

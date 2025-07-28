@@ -4,10 +4,34 @@ import { requestNotificationPermissions } from "../../lib/notifications";
 import { useEffect } from "react";
 import * as Notifications from "expo-notifications";
 
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowBanner: true,        
+    shouldShowList: true,          
+    shouldPlaySound: true,        
+    shouldSetBadge: false,        
+    shouldShowInForeground: true,  
+  }),
+});
+
 export default function TabsLayout() {
-    useEffect(() => {
+  useEffect(() => {
+    // Step 2: Request Notification Permission at app start
     requestNotificationPermissions();
+
+    // Step 3: Listener → When user taps notification
+    const subscription = Notifications.addNotificationResponseReceivedListener((response) => {
+      console.log("📲 User tapped notification:", response);
+
+      // 🔜 page redirection?
+      // if (response.notification.request.content.data?.screen === "task") {
+      //   router.push("/task");
+      // }
+    });
+
+    return () => subscription.remove();
   }, []);
+
   return (
     <Tabs
       screenOptions={({ route }) => ({
@@ -24,7 +48,7 @@ export default function TabsLayout() {
           } else if (route.name === "task") {
             iconName = focused ? "list" : "list-outline";
           } else {
-            iconName = "ellipse"; // fallback icon
+            iconName = "ellipse";
           }
 
           return <Ionicons name={iconName} size={size} color={color} />;
