@@ -6,11 +6,17 @@ type DateTimeFieldProps = {
   label: string;
   value: string;
   onChange: (date: string) => void;
-  compareTo?: string;       // Optional: check against due date for reminder
-  mustBeBefore?: boolean;   // true = value must be before compareTo
+  compareTo?: string;
+  mustBeBefore?: boolean;
 };
 
-export default function DateTimeField({ label, value, onChange, compareTo, mustBeBefore }: DateTimeFieldProps) {
+export default function DateTimeField({
+  label,
+  value,
+  onChange,
+  compareTo,
+  mustBeBefore,
+}: DateTimeFieldProps) {
   const [isDatePickerVisible, setDatePickerVisible] = useState(false);
   const [isTimePickerVisible, setTimePickerVisible] = useState(false);
   const [tempDate, setTempDate] = useState<Date | null>(null);
@@ -18,7 +24,8 @@ export default function DateTimeField({ label, value, onChange, compareTo, mustB
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  const formatDate = (iso: string) => iso ? new Date(iso).toLocaleString() : "Not set";
+  const formatDate = (iso: string) =>
+    iso ? new Date(iso).toLocaleString() : "Not set";
 
   const getSmartDefaultTime = (selectedDate: Date) => {
     const now = new Date();
@@ -33,6 +40,26 @@ export default function DateTimeField({ label, value, onChange, compareTo, mustB
     return defaultTime;
   };
 
+  const handleValidDate = (finalDate: Date) => {
+    // 🚨 Past time check
+    if (finalDate.getTime() < new Date().getTime()) {
+      Alert.alert("Invalid time", "Please select a future time.");
+      return;
+    }
+
+    // 🚨 Reminder AFTER due time check
+    if (mustBeBefore && compareTo) {
+      const dueDate = new Date(compareTo);
+      if (finalDate.getTime() > dueDate.getTime()) {
+        Alert.alert("Invalid time", `${label} must be before the due time.`);
+        return;
+      }
+    }
+
+    // ✅ Only update if valid
+    onChange(finalDate.toISOString());
+  };
+
   return (
     <View style={styles.wrapper}>
       <Text style={styles.label}>{label}</Text>
@@ -40,55 +67,54 @@ export default function DateTimeField({ label, value, onChange, compareTo, mustB
         <Text style={styles.pickerText}>{formatDate(value)}</Text>
       </Pressable>
 
-      {/* Date Picker */}
-      <DateTimePickerModal
-        isVisible={isDatePickerVisible}
-        mode="date"
-        minimumDate={today}
-        display={Platform.OS === "android" ? "calendar" : "inline"}
-        onConfirm={(date) => {
-          setTempDate(date); // Store date TEMPORARILY
-          setDatePickerVisible(false);
-          setTimePickerVisible(true);
-        }}
-        onCancel={() => setDatePickerVisible(false)}
-      />
+      {/* iOS: ONE datetime picker */}
+      {Platform.OS === "ios" && (
+        <DateTimePickerModal
+          isVisible={isDatePickerVisible}
+          mode="datetime" // ✅ One-step date+time on iOS
+          minimumDate={today}
+          display="spinner"
+          onConfirm={(date) => {
+            handleValidDate(date);
+            setDatePickerVisible(false);
+          }}
+          onCancel={() => setDatePickerVisible(false)}
+        />
+      )}
 
-      {/* Time Picker */}
-      <DateTimePickerModal
-        isVisible={isTimePickerVisible}
-        mode="time"
-        date={tempDate ? getSmartDefaultTime(tempDate) : undefined}
-        onConfirm={(time) => {
-          if (tempDate) {
-            const finalDate = new Date(tempDate);
-            finalDate.setHours(time.getHours());
-            finalDate.setMinutes(time.getMinutes());
+      {/* Android: TWO pickers (date → time) */}
+      {Platform.OS === "android" && (
+        <>
+          <DateTimePickerModal
+            isVisible={isDatePickerVisible}
+            mode="date"
+            minimumDate={today}
+            display="calendar"
+            onConfirm={(date) => {
+              setTempDate(date);
+              setDatePickerVisible(false);
+              setTimePickerVisible(true);
+            }}
+            onCancel={() => setDatePickerVisible(false)}
+          />
 
-            // 🚨 Past time check
-            if (finalDate.getTime() < new Date().getTime()) {
-              Alert.alert("Invalid time", "Please select a future time.");
-              setTimePickerVisible(false);
-              return; // ❌ DO NOT commit
-            }
-
-            // 🚨 Reminder AFTER due time check
-            if (mustBeBefore && compareTo) {
-              const dueDate = new Date(compareTo);
-              if (finalDate.getTime() > dueDate.getTime()) {
-                Alert.alert("Invalid time", `${label} must be before the due time.`);
-                setTimePickerVisible(false);
-                return; // ❌ DO NOT commit
+          <DateTimePickerModal
+            isVisible={isTimePickerVisible}
+            mode="time"
+            date={tempDate ? getSmartDefaultTime(tempDate) : undefined}
+            onConfirm={(time) => {
+              if (tempDate) {
+                const finalDate = new Date(tempDate);
+                finalDate.setHours(time.getHours());
+                finalDate.setMinutes(time.getMinutes());
+                handleValidDate(finalDate);
               }
-            }
-
-            // ✅ Only update if valid
-            onChange(finalDate.toISOString());
-            setTimePickerVisible(false);
-          }
-        }}
-        onCancel={() => setTimePickerVisible(false)}
-      />
+              setTimePickerVisible(false);
+            }}
+            onCancel={() => setTimePickerVisible(false)}
+          />
+        </>
+      )}
     </View>
   );
 }
