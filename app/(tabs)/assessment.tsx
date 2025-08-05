@@ -17,16 +17,31 @@ import { requestNotificationPermissions } from "../../lib/notifications";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 
+const formatDate = (isoString: string) =>
+  new Date(isoString).toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+
+const isDueSoon = (due: string) => {
+  const now = new Date();
+  const dueTime = new Date(due);
+  const diff = dueTime.getTime() - now.getTime();
+  return diff > 0 && diff <= 48 * 60 * 60 * 1000; // within 48h
+};
+
+const themeColor = "#1c3f75";
+const warningColor = "#D63031";
+
 export default function AssessmentPage() {
   const [assessments, setAssessments] = useState([]);
   const [userId, setUserId] = useState(null);
-
   const [modalVisible, setModalVisible] = useState(false);
   const [editingAssessment, setEditingAssessment] = useState(null);
 
-  // Fetch user ID once
   useEffect(() => {
-    // Request notification permissions
     requestNotificationPermissions();
     const fetchUserId = async () => {
       const {
@@ -45,7 +60,6 @@ export default function AssessmentPage() {
     fetchUserId();
   }, []);
 
-  // Load assessments for this user
   const fetchAssessments = async () => {
     if (!userId) return;
     const { data, error } = await supabase
@@ -62,19 +76,16 @@ export default function AssessmentPage() {
     if (userId) fetchAssessments();
   }, [userId]);
 
-  // Open modal for add
   const openNew = () => {
     setEditingAssessment(null);
     setModalVisible(true);
   };
 
-  // Open modal for edit
   const openEdit = (assessment) => {
     setEditingAssessment(assessment);
     setModalVisible(true);
   };
 
-  // Submit handler (add or update)
   const handleSubmit = async (input: AssessmentInput) => {
     if (!userId) return;
 
@@ -82,9 +93,7 @@ export default function AssessmentPage() {
       ...input,
       user_id: userId,
       due_time: new Date(input.due_time),
-      reminder_time: input.reminder_time
-        ? new Date(input.reminder_time)
-        : null,
+      reminder_time: input.reminder_time ? new Date(input.reminder_time) : null,
     };
 
     if (editingAssessment) {
@@ -103,7 +112,6 @@ export default function AssessmentPage() {
     fetchAssessments();
   };
 
-  // Delete handler
   const handleDelete = async () => {
     if (!editingAssessment) return;
     const { error } = await supabase
@@ -120,7 +128,6 @@ export default function AssessmentPage() {
     }
   };
 
-  // Group assessments by date
   const groupByDate = (items) => {
     const grouped = {};
     for (let item of items) {
@@ -138,18 +145,13 @@ export default function AssessmentPage() {
   const grouped = groupByDate(assessments);
 
   return (
-    // Gradient background wrapper
-    <LinearGradient
-      colors={["#f0f8ff", "#44a0fcff"]}
-      style={{ flex: 1}}
-    >
+    <LinearGradient colors={["#f0f8ff", "#44a0fcff"]} style={{ flex: 1 }}>
       <Header title="Readiculous" showLogout />
 
-      {/* Page title */}
       <View style={styles.titleviewcard}>
-      <Text style={styles.pageTitle}>Assessment List</Text>
+        <Text style={styles.pageTitle}>Assessment List</Text>
       </View>
-      {/* Grouped list */}
+
       <ScrollView style={{ marginTop: 16 }}>
         {Object.entries(grouped).map(([date, items]) => (
           <View key={date} style={{ marginBottom: 24 }}>
@@ -160,32 +162,45 @@ export default function AssessmentPage() {
                 style={styles.card}
                 onPress={() => openEdit(a)}
               >
-                <Text style={styles.cardTitle}>{a.title}</Text>
-                <Text style={styles.cardSubtitle}>Subject: {a.subject}</Text>
-                <Text style={styles.cardSubtitle}>
-                  Due: {new Date(a.due_time).toLocaleString()}
-                </Text>
-                <Text style={styles.cardSubtitle}>
-                  Reminder:{" "}
-                  {a.reminder_time
-                    ? new Date(a.reminder_time).toLocaleString()
-                    : "None"}
-                </Text>
-                <Text style={styles.cardSubtitle}>
-                  Description: {a.description}
-                </Text>
+                <View style={styles.infoRow}>
+                  <Text style={styles.cardTitle}>📚 {a.title}</Text>
+                </View>
+
+                <View style={styles.infoRow}>
+                  <Ionicons name="book-outline" size={16} color={themeColor} />
+                  <Text style={styles.cardSubtitle}>  {a.subject}</Text>
+                </View>
+
+                <View style={styles.infoRow}>
+                  <Ionicons
+                    name="calendar-outline"
+                    size={16}
+                    color={isDueSoon(a.due_time) ? warningColor : themeColor}
+                  />
+                  <Text style={styles.cardSubtitle}>  {formatDate(a.due_time)}</Text>
+                </View>
+
+                <View style={styles.infoRow}>
+                  <Ionicons name="notifications-outline" size={16} color={themeColor} />
+                  <Text style={styles.cardSubtitle}>  {a.reminder_time ? formatDate(a.reminder_time) : "None"}</Text>
+                </View>
+
+                {a.description ? (
+                  <View style={styles.infoRow}>
+                    <Ionicons name="document-text-outline" size={16} color={themeColor} />
+                    <Text style={styles.cardSubtitle}>  {a.description}</Text>
+                  </View>
+                ) : null}
               </Pressable>
             ))}
           </View>
         ))}
       </ScrollView>
 
-      {/* Floating button to add new assessment */}
       <TouchableOpacity style={styles.floatingButton} onPress={openNew}>
         <Ionicons name="add" size={28} color="white" />
       </TouchableOpacity>
 
-      {/* Modal with dynamic behavior */}
       <AssessmentFormModal
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
@@ -234,28 +249,32 @@ const styles = StyleSheet.create({
   },
   cardTitle: {
     fontWeight: "bold",
-    fontSize: 16,
-    marginBottom: 4,
+    fontSize: 18,
+    color: themeColor,
   },
   cardSubtitle: {
     fontSize: 14,
-    color: "#555",
+    color: "#666",
     marginBottom: 2,
+    fontWeight:"semibold",
+  },
+  infoRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 4,
+    color:themeColor,
   },
   floatingButton: {
     position: "absolute",
+    bottom: 20,
     right: 20,
-    bottom: 30,
-    width: 50,
-    height: 50,
-    backgroundColor: "#4f93ff",
-    borderRadius: 25,
-    justifyContent: "center",
+    backgroundColor: "#007AFF",
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     alignItems: "center",
+    justifyContent: "center",
+    zIndex: 10,
     elevation: 5,
-    shadowColor: "#000",
-    shadowOpacity: 0.2,
-    shadowOffset: { width: 0, height: 3 },
-    shadowRadius: 5,
   },
 });

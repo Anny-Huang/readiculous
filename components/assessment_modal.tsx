@@ -91,7 +91,7 @@ export default function AssessmentFormModal({
     <Modal visible={visible} animationType="slide">
       <View style={styles.modalContainer}>
         <Text style={styles.heading}>{isEdit ? "Edit" : "New"} Assessment</Text>
-
+        <Text style={styles.label}>🏷️ Title</Text>
         <TextInput
           placeholder="Title"
           style={styles.input}
@@ -99,23 +99,24 @@ export default function AssessmentFormModal({
           onChangeText={setTitle}
         />
 
-        <DateTimeField label="Due" value={dueTime} onChange={setDueTime} />
+        <DateTimeField label="📅 Due" value={dueTime} onChange={setDueTime} />
 
         <DateTimeField
-          label="Reminder"
+          label="⏰ Reminder"
           value={reminder}
           onChange={setReminder}
           compareTo={dueTime}
           mustBeBefore
         />
 
+        <Text style={styles.label}>🎓 Subject</Text>
         <TextInput
           placeholder="Subject"
           style={styles.input}
           value={subject}
           onChangeText={setSubject}
         />
-
+               <Text style={styles.label}>🧾 Description</Text>
         <TextInput
           placeholder="Description"
           style={[styles.input, { height: 80 }]}
@@ -125,7 +126,7 @@ export default function AssessmentFormModal({
         />
 
         <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 10 }}>
-          <Button title="Cancel" color="gray" onPress={onClose} />
+          <Button title="Cancel" color="gray" onPress={onClose}/>
           {isEdit && onDelete && (
             <Button
               title="Delete"
@@ -146,7 +147,7 @@ export default function AssessmentFormModal({
 }
 
 const styles = StyleSheet.create({
-  heading: { fontSize: 24, fontWeight: "bold", marginBottom: 12 },
+  heading: { fontSize: 24, fontWeight: "bold", marginBottom: 12,  color: "#1c3f75",textAlign:"center" },
   input: {
     borderWidth: 1,
     borderColor: "#ccc",
@@ -160,4 +161,11 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     justifyContent: "center",
   },
+  label: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#1c3f75",
+    marginBottom: 4,
+  },
 });
+

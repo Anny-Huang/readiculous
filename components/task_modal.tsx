@@ -6,11 +6,10 @@ import {
   Button,
   Modal,
   StyleSheet,
-  Pressable,
   Alert,
 } from "react-native";
 import { scheduleNotification } from "../lib/notifications";
-import DateTimeField from "../components/DateTimeField";  // ✅ import reusable field
+import DateTimeField from "../components/DateTimeField";
 
 export type TaskInput = {
   title: string;
@@ -37,7 +36,9 @@ export default function TaskFormModal({
 
   const [title, setTitle] = useState(initialValues?.title || "");
   const [reminder, setReminder] = useState(initialValues?.reminder_time || "");
-  const [description, setDescription] = useState(initialValues?.description || "");
+  const [description, setDescription] = useState(
+    initialValues?.description || ""
+  );
 
   useEffect(() => {
     setTitle(initialValues?.title || "");
@@ -46,19 +47,17 @@ export default function TaskFormModal({
   }, [initialValues, visible]);
 
   const handleSubmit = async () => {
-    if (!title) {
-      Alert.alert("Missing task title");
+    if (!title || !reminder) {
+      Alert.alert("Missing required fields");
       return;
     }
 
-    // Save task data
     await onSubmit({
       title,
       reminder_time: reminder,
       description,
     });
 
-    // ✅ Only schedule notification if reminder is in the future
     if (reminder) {
       const reminderDate = new Date(reminder);
       const now = new Date();
@@ -87,21 +86,22 @@ export default function TaskFormModal({
       <View style={styles.modalContainer}>
         <Text style={styles.heading}>{isEdit ? "Edit" : "New"} Task</Text>
 
+        <Text style={styles.label}>🏷️ Name</Text>
         <TextInput
-          placeholder="Title"
+          placeholder="Name"
           style={styles.input}
           value={title}
           onChangeText={setTitle}
         />
 
-        {/* ✅ Replace old picker with DateTimeField */}
         <DateTimeField
-          label="Reminder"
+          label="⏰ Reminder"
           value={reminder}
           onChange={(date) => setReminder(date)}
-          mustBeBefore={false}   // Only enforce future time, not before due date
+          mustBeBefore={false}
         />
 
+        <Text style={styles.label}>🧾 Description</Text>
         <TextInput
           placeholder="Description"
           style={[styles.input, { height: 80 }]}
@@ -110,7 +110,13 @@ export default function TaskFormModal({
           multiline
         />
 
-        <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 10 }}>
+        <View
+          style={{
+            flexDirection: "row",
+            justifyContent: "space-between",
+            gap: 10,
+          }}
+        >
           <Button title="Cancel" color="gray" onPress={onClose} />
           {isEdit && onDelete && (
             <Button
@@ -132,7 +138,13 @@ export default function TaskFormModal({
 }
 
 const styles = StyleSheet.create({
-  heading: { fontSize: 24, fontWeight: "bold", marginBottom: 12 },
+  heading: {
+    fontSize: 24,
+    fontWeight: "bold",
+    marginBottom: 12,
+    color: "#1c3f75",
+    textAlign: "center",
+  },
   input: {
     borderWidth: 1,
     borderColor: "#ccc",
@@ -145,5 +157,12 @@ const styles = StyleSheet.create({
     padding: 20,
     backgroundColor: "#fff",
     justifyContent: "center",
+  },
+  label: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#1c3f75",
+    marginBottom: 4,
+    marginTop: 8,
   },
 });

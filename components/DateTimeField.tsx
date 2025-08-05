@@ -121,7 +121,12 @@ export default function DateTimeField({
 
 const styles = StyleSheet.create({
   wrapper: { marginBottom: 12 },
-  label: { fontSize: 16, fontWeight: "600", marginBottom: 5 },
+  label: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#1c3f75",
+    marginBottom: 4,
+  },
   pickerButton: {
     borderWidth: 1,
     borderColor: "#ccc",

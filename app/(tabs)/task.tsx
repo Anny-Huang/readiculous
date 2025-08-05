@@ -13,8 +13,10 @@ import Header from "../../components/header_item";
 import TaskForm, { TaskInput } from "../../components/task_modal";
 import { Ionicons } from "@expo/vector-icons"; // for checkbox icons
 import { requestNotificationPermissions } from "../../lib/notifications";
-import TestNotificationButton from "../../components/test_notification";
 import { LinearGradient } from "expo-linear-gradient";
+
+
+const themeColor = "#1c3f75";
 
 type Task = {
   id: number;
@@ -202,9 +204,9 @@ export default function TaskPage() {
                         },
                       ]}
                     >
-                      {task.title}
+                      📝 {task.title}
                     </Text>
-                    <Text style={styles.description}>{task.description}</Text>
+                    <Text style={styles.description}>       {task.description}</Text>
                   </View>
                   <Pressable onPress={() => toggleCompleted(task)}>
                     <Ionicons
@@ -258,7 +260,9 @@ pageTitle: {
   card: {
     backgroundColor: "#fff",
     padding: 12,
-    borderRadius: 10,
+    borderRadius: 20,
+    borderColor: "#d6e4ff",
+    borderWidth: 1,
     marginBottom: 10,
     elevation: 2,
     shadowColor: "#000",
@@ -270,10 +274,13 @@ pageTitle: {
   title: {
     fontWeight: "bold",
     fontSize: 16,
+    color:themeColor
   },
   description: {
+    fontSize: 14,
     color: "#666",
-    fontSize: 13,
+    marginBottom: 2,
+    fontWeight:"semibold"
   },
   taskRow: {
     flexDirection: "row",
