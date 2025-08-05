@@ -14,6 +14,7 @@ import TaskFormModal from "../../components/task_modal";
 import AssessmentFormModal from "../../components/assessment_modal";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
+import { Colors } from "react-native/Libraries/NewAppScreen";
 
 const themeColor = "#1c3f75";
 
@@ -180,6 +181,8 @@ export default function Dashboard() {
                 >
                   <View style={styles.todoItemRow}>
                     <Text style={styles.todoItemText}>{a.title}</Text>
+                     <Text>⌛ {new Date(a.due_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+  </Text>
                   </View>
                   <View style={styles.divider} />
                 </Pressable>
@@ -203,6 +206,7 @@ export default function Dashboard() {
                 >
                   <View style={styles.todoItemRow}>
                     <Text style={styles.todoItemText}>{t.title}</Text>
+                    <Text>⌛ {new Date(t.reminder_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</Text>
                   </View>
                   <View style={styles.divider} />
                 </Pressable>
@@ -286,11 +290,11 @@ const styles = StyleSheet.create({
   },
   titleviewcard: {
     backgroundColor: "#B6D3FF",
-    borderRadius: 20,
-    paddingVertical: 15,
-    paddingHorizontal: 15,
+    borderRadius: 15,
+    paddingVertical: 2,
+    paddingHorizontal: 5,
     marginVertical: 10,
-    width: "100%",
+    width: "50%",
     alignSelf: "center",
   },
   welcomeRow: {
@@ -300,25 +304,25 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   welcomemsg: {
-    fontSize: 28,
+    fontSize: 12,
     fontWeight: "bold",
     textAlign: "center",
   },
   todoCount: {
-    fontSize: 36,
+    fontSize: 40,
     fontWeight: "bold",
     color: "#267dffff",
     textAlign: "center",
   },
   todoSubtext: {
-    fontSize: 20,
+    fontSize: 22,
     marginBottom: 15,
     textAlign: "center",
   },
   todoCard: {
     backgroundColor: "white",
     width: "95%",
-    height: "60%",
+    height: "55%",
     padding: 16,
     borderRadius: 30,
     borderColor: "#a4c1fbff",
@@ -340,6 +344,7 @@ const styles = StyleSheet.create({
   },
   todoItemRow: {
     flexDirection: "row",
+    justifyContent:"space-between",
     alignItems: "center",
     paddingVertical: 8,
   },
