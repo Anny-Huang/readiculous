@@ -5,17 +5,15 @@ import {
   StyleSheet,
   Pressable,
   ScrollView,
-  Animated,
-  Easing,
 } from "react-native";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "expo-router";
 import { supabase } from "../../lib/supabase";
 import Header from "../../components/header_item";
 import TaskFormModal from "../../components/task_modal";
 import AssessmentFormModal from "../../components/assessment_modal";
 import { LinearGradient } from "expo-linear-gradient";
-import { MaterialIcons, Ionicons } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
 
 const themeColor = "#1c3f75";
 
@@ -36,15 +34,8 @@ export default function Dashboard() {
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedAssessment, setSelectedAssessment] = useState(null);
   const [assessmentModalVisible, setAssessmentModalVisible] = useState(false);
-  const [animatedCount, setAnimatedCount] = useState(0);
 
   const router = useRouter();
-
-  // 🎬 Animations
-  const fadeIn = useRef(new Animated.Value(0)).current;
-  const translateY = useRef(new Animated.Value(20)).current;
-  const cardScale = useRef(new Animated.Value(1)).current;
-  const welcomeScale = useRef(new Animated.Value(1)).current;
 
   const isToday = (iso) => {
     const date = new Date(iso);
@@ -79,41 +70,6 @@ export default function Dashboard() {
 
     checkAuth();
 
-    // 🎬 Delayed entrance animation
-    setTimeout(() => {
-      const welcomePulse = [];
-      for (let i = 0; i < 10; i++) {
-        welcomePulse.push(
-          Animated.timing(welcomeScale, {
-            toValue: 1.1,
-            duration: 400,
-            useNativeDriver: true,
-          }),
-          Animated.timing(welcomeScale, {
-            toValue: 1,
-            duration: 400,
-            useNativeDriver: true,
-          })
-        );
-      }
-
-      Animated.parallel([
-        Animated.timing(fadeIn, {
-          toValue: 1,
-          duration: 10000,
-          easing: Easing.out(Easing.exp),
-          useNativeDriver: true,
-        }),
-        Animated.timing(translateY, {
-          toValue: 0,
-          duration: 10000,
-          easing: Easing.out(Easing.exp),
-          useNativeDriver: true,
-        }),
-        Animated.sequence(welcomePulse),
-      ]).start();
-    }, 300);
-
     const { data: listener } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         if (!session) router.replace("/");
@@ -147,27 +103,6 @@ export default function Dashboard() {
 
     setTodayTasks(todayTasks);
     setTodayAssessments(todayAssessments);
-
-    let current = 0;
-    const target = todayTasks.length + todayAssessments.length;
-    const interval = setInterval(() => {
-      current++;
-      setAnimatedCount(current);
-      if (current >= target) clearInterval(interval);
-    }, 200);
-
-    Animated.sequence([
-      Animated.timing(cardScale, {
-        toValue: 1.03,
-        duration: 600,
-        useNativeDriver: true,
-      }),
-      Animated.timing(cardScale, {
-        toValue: 1,
-        duration: 600,
-        useNativeDriver: true,
-      }),
-    ]).start();
   };
 
   useEffect(() => {
@@ -179,7 +114,7 @@ export default function Dashboard() {
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "tasks" },
-        () => fetchData()
+        fetchData
       )
       .subscribe();
 
@@ -188,7 +123,7 @@ export default function Dashboard() {
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "assessments" },
-        () => fetchData()
+        fetchData
       )
       .subscribe();
 
@@ -198,42 +133,146 @@ export default function Dashboard() {
     };
   }, [userId]);
 
-
+  const totalTodos = todayTasks.length + todayAssessments.length;
 
   return (
     <View style={{ flex: 1 }}>
       <Header title="Readiculous" showLogout />
+
       <LinearGradient
         colors={["#f0f8ff", "#44a0fcff"]}
         style={{ flex: 1, paddingHorizontal: 20, paddingTop: 10 }}
       >
-        <Animated.View style={{ opacity: fadeIn, transform: [{ translateY }] }}>
-          <View style={styles.titleviewcard}>
-            <View style={styles.welcomeRow}>
-              <Ionicons
-                name="happy-outline"
-                size={28}
-                color={themeColor}
-                style={{ marginRight: 8 }}
-              />
-              <Text style={styles.welcomemsg}>
-                {fullName ? `Welcome ${fullName} !` : "Welcome!"}
-              </Text>
-            </View>
+        <View style={styles.titleviewcard}>
+          <View style={styles.welcomeRow}>
+            <Ionicons
+              name="happy-outline"
+              size={28}
+              color={themeColor}
+              style={{ marginRight: 8 }}
+            />
+            <Text style={styles.welcomemsg}>
+              {fullName ? `Welcome ${fullName} !` : "Welcome!"}
+            </Text>
           </View>
-          <Text style={styles.todoHeader}>You Have</Text>
-          <Text style={styles.todoCount}>{animatedCount}</Text>
-          <Text style={styles.todoSubtext}>To-Dos Today.</Text>
-        </Animated.View>
+        </View>
 
-        <Animated.View style={[styles.todoCard, { transform: [{ scale: cardScale }] }]}>
+        <Text style={styles.todoHeader}>You Have</Text>
+        <Text style={styles.todoCount}>{totalTodos}</Text>
+        <Text style={styles.todoSubtext}>To-Dos Today.</Text>
+
+        <View style={styles.todoCard}>
           <ScrollView style={{ maxHeight: "100%" }}>
-            {/* assessments/tasks list goes here */}
+            {/* Assessments Section */}
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionHeaderText}>📚 Assessment</Text>
+            </View>
+            {todayAssessments.length === 0 ? (
+              <Text style={styles.todoItem}>None</Text>
+            ) : (
+              todayAssessments.map((a) => (
+                <Pressable
+                  key={a.id}
+                  onPress={() => {
+                    setSelectedAssessment(a);
+                    setAssessmentModalVisible(true);
+                  }}
+                >
+                  <View style={styles.todoItemRow}>
+                    <Text style={styles.todoItemText}>{a.title}</Text>
+                  </View>
+                  <View style={styles.divider} />
+                </Pressable>
+              ))
+            )}
+
+            {/* Tasks Section */}
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionHeaderText}>📝 Task</Text>
+            </View>
+            {todayTasks.length === 0 ? (
+              <Text style={styles.todoItem}>None</Text>
+            ) : (
+              todayTasks.map((t) => (
+                <Pressable
+                  key={t.id}
+                  onPress={() => {
+                    setSelectedTask(t);
+                    setModalVisible(true);
+                  }}
+                >
+                  <View style={styles.todoItemRow}>
+                    <Text style={styles.todoItemText}>{t.title}</Text>
+                  </View>
+                  <View style={styles.divider} />
+                </Pressable>
+              ))
+            )}
           </ScrollView>
-        </Animated.View>
+        </View>
       </LinearGradient>
 
-      {/* Modals (AssessmentFormModal, TaskFormModal) remain unchanged */}
+      {/* Assessment Modal */}
+      <AssessmentFormModal
+        visible={assessmentModalVisible}
+        initialValues={selectedAssessment || undefined}
+        onClose={() => {
+          setAssessmentModalVisible(false);
+          setSelectedAssessment(null);
+        }}
+        onSubmit={async (data) => {
+          if (!selectedAssessment) return;
+          await supabase
+            .from("assessments")
+            .update({
+              ...data,
+              due_time: data.due_time ? new Date(data.due_time) : null,
+            })
+            .eq("id", selectedAssessment.id);
+          fetchData();
+        }}
+        onDelete={async () => {
+          if (!selectedAssessment) return;
+          await supabase
+            .from("assessments")
+            .delete()
+            .eq("id", selectedAssessment.id);
+          setAssessmentModalVisible(false);
+          setSelectedAssessment(null);
+          fetchData();
+        }}
+      />
+
+      {/* Task Modal */}
+      <TaskFormModal
+        visible={modalVisible}
+        initialValues={selectedTask || undefined}
+        onClose={() => {
+          setModalVisible(false);
+          setSelectedTask(null);
+        }}
+        onSubmit={async (data) => {
+          if (!selectedTask) return;
+          await supabase
+            .from("tasks")
+            .update({
+              ...data,
+              reminder_time: data.reminder_time ? new Date(data.reminder_time) : null,
+            })
+            .eq("id", selectedTask.id);
+          fetchData();
+        }}
+        onDelete={async () => {
+          if (!selectedTask) return;
+          await supabase
+            .from("tasks")
+            .delete()
+            .eq("id", selectedTask.id);
+          setModalVisible(false);
+          setSelectedTask(null);
+          fetchData();
+        }}
+      />
     </View>
   );
 }
@@ -288,14 +327,16 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   sectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 10,
+    marginBottom: 6,
+  },
+  sectionHeaderText: {
     fontSize: 20,
     fontWeight: "700",
     color: themeColor,
-    marginTop: 10,
-    marginBottom: 6,
-    borderBottomColor: themeColor,
-    borderBottomWidth: 2,
-    paddingBottom: 4,
+    marginLeft: 6,
   },
   todoItemRow: {
     flexDirection: "row",
